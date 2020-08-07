@@ -75,7 +75,7 @@ class Notepad:
 		self.thisFileMenu.add_command(label="Save As", command=self.saveAsFile)	 
 		# To create a line in the dialog
 		self.thisFileMenu.add_separator()										 
-		self.thisFileMenu.add_command(label="Exit", command=self.quitApplication) 
+		self.thisFileMenu.add_command(label="Exit", command=self.on_closing) 
 		self.thisMenuBar.add_cascade(label="File", menu=self.thisFileMenu)	 
 		# To give a feature of undo 
 		self.thisEditMenu.add_command(label="Undo", command=self.undo)	 
@@ -172,10 +172,10 @@ class Notepad:
 			self.mainFont['size']=varSize.get()
 			self.mainFont['weight']=varStyle.get()
 			fofm.destroy()
-		btnOk = Button(fofm,text='OK', width = 10,height=1,relief="solid", bg='#C7C6C1', bd=1,command=out)
+		btnOk = Button(fofm,text='OK', width = 10,height=1,relief="solid", bg='#ECECEC', bd=1,command=out)
 		btnOk.focus_set()
 		btnOk.place(x=245,y=400)
-		btnCancel = Button(fofm,text='Cancel', width = 10,height=1,relief="solid", bg='#C7C6C1', bd=1,command=lambda:fofm.destroy())
+		btnCancel = Button(fofm,text='Cancel', width = 10,height=1,relief="solid", bg='#ECECEC', bd=1,command=lambda:fofm.destroy())
 		btnCancel.place(x=330,y=400)
 		
 		#font 
@@ -302,10 +302,7 @@ class Notepad:
 		all_Sizes = listSize.get(0,END)
 		searched_Font()
 		searched_Style()
-		searched_Size()
-	def quitApplication(self): 
-		#exit
-		self.root.destroy()  
+		searched_Size() 
 	def showAbout(self):
 		messagebox.showinfo("Notepad","Jatin Bhoir") 
 	def openFile(self,event=None):
@@ -429,9 +426,11 @@ class Notepad:
 					ending_index  = len(word)+int(f.split(".")[1])
 					coordinates = "{}.{}".format(starting_index, ending_index)
 					self.thisTextArea.tag_add("search", f, coordinates)
-					self.thisTextArea.tag_configure("search", background="skyblue", foreground="white")
+					self.thisTextArea.tag_configure("search", background="RoyalBlue1", foreground="white")
 					index = coordinates
 					self.thisTextArea.mark_set("insert",index)
+					self.thisTextArea.see(index)
+					self.thisTextArea.event_generate("<<NextLine>>")
 				if dir.get()==1:
 					starting_index =int(index.split(".")[0])
 					ending_index  = int(index.split(".")[1])-len(word)
@@ -444,10 +443,11 @@ class Notepad:
 					ending_index  = len(word)+int(f.split(".")[1])
 					coordinates = "{}.{}".format(starting_index, ending_index)
 					self.thisTextArea.tag_add("search", f, coordinates)
-					self.thisTextArea.tag_configure("search", background="skyblue", foreground="white")
+					self.thisTextArea.tag_configure("search", background="RoyalBlue1", foreground="white")
 					index = coordinates
 					#index= "{}.{}".format(starting_index, ending_index-len(word))
 					self.thisTextArea.mark_set("insert",index)
+					self.thisTextArea.see(index)
 		global word,ftar,ftts ,entFind
 		if ftar is not None:
 			ftar.destroy()
@@ -551,6 +551,8 @@ class Notepad:
 					self.thisTextArea.tag_configure("search", background="RoyalBlue1",foreground='white')
 					self.thisTextArea.tag_raise("sel")
 					index = coordinates
+				self.thisTextArea.see(index)
+				self.thisTextArea.event_generate("<<NextLine>>")
 				return True
 			else:
 				return None
@@ -576,6 +578,8 @@ class Notepad:
 				self.thisTextArea.tag_configure("search", background="RoyalBlue1", foreground="white")
 				index = ending_index
 			self.thisTextArea.mark_set("insert",index)
+			self.thisTextArea.see(index)
+			self.thisTextArea.event_generate("<<NextLine>>")
 			
 			
 		def _replace_():
