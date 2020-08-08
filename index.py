@@ -53,8 +53,8 @@ class Notepad:
 	thisFormatMenu = Menu(thisMenuBar, tearoff=0)
 	thisViewMenu = Menu(thisMenuBar, tearoff=0)
 	# To add scrollbar 
-	YScrollBar = Scrollbar(thisTextArea,orient=tkinter.VERTICAL)	
-	XScrollBar = Scrollbar(thisTextArea,orient=tkinter.HORIZONTAL) 
+	YScrollBar = Scrollbar(thisTextArea ,orient=tkinter.VERTICAL)	
+	XScrollBar = Scrollbar(root,orient=tkinter.HORIZONTAL) 
 	file = None
 
 	def __init__(self,**kwargs):
@@ -93,7 +93,6 @@ class Notepad:
 		self.root.grid_rowconfigure(0, weight=1) 
 		self.root.grid_columnconfigure(0, weight=1) 
 		# Add controls (widget) 
-		self.thisTextArea.grid(sticky = N + E + S + W) 
 		# To open new file 
 		self.thisFileMenu.add_command(label="New", command=self.newFile, accelerator="Ctrl+N")	 
 		# To open a already existing file 
@@ -139,16 +138,17 @@ class Notepad:
 		# To create a view function of the notepad 
 		self.thisViewMenu.add_checkbutton(label="Status bar",variable=self.var,command = self.checkStatus) 
 		self.thisMenuBar.add_cascade(label="View", menu=self.thisViewMenu) 
-		self.root.config(menu=self.thisMenuBar) 	 		
+		self.root.config(menu=self.thisMenuBar)
 		# To create a feature of description of the notepad 
 		self.thisHelpMenu.add_command(label="About Notepad", command=self.showAbout) 
 		self.thisMenuBar.add_cascade(label="Help", menu=self.thisHelpMenu) 
-
-		self.XScrollBar.pack(side=BOTTOM,fill=X)
-		self.YScrollBar.pack(side=RIGHT,fill=Y)					 		
+				 		
 		# Scrollbar will adjust automatically according to the content	
-		self.statusbar = Label(self.root,  text="Line: 1, Col: 0", bd=1, relief=SUNKEN, anchor=W)
+		self.statusbar = Label(self.root,  text="Line: 1, Col: 0", bd=1,height=1, relief=SUNKEN, anchor=N)
+		self.thisTextArea.grid(sticky = NSEW) 
+		self.XScrollBar.grid(sticky=NSEW)#pack(side=BOTTOM,fill=X)
 		self.statusbar.grid(sticky=NSEW)
+		self.YScrollBar.pack(side=RIGHT,fill=Y)	
 	 
 		self.thisTextArea.config(xscrollcommand=self.XScrollBar.set) 
 		self.thisTextArea.config(yscrollcommand=self.YScrollBar.set)
@@ -655,7 +655,6 @@ class Notepad:
 			return
 
 		global ftar,ftts,word,replaceWord
-		fields = {}
 		if ftar is not None:
 			ftar.destroy()
 		if ftts is not None:
@@ -675,7 +674,6 @@ class Notepad:
 	
 		btnReplace = ttk.Button(ftar,text='Replace', width = 10,command = _replace_)
 		btnReplace.place(x=280,y=40)
-		fields['submit']=False
 		btnReplaceAll = ttk.Button(ftar,text='Replace All', width = 10,command = _replace_all_)
 		btnReplaceAll.place(x=280,y=70)
 		btnCancel = ttk.Button(ftar,text='Cancel', width = 10,command=lambda:ftar.destroy()).place(x=280,y=100)
