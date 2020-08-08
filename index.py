@@ -1,9 +1,34 @@
-from tkinter import *
-from tkinter import messagebox
 import tkinter.ttk as ttk
+from tkinter import messagebox
 import tkinter.font as tkFont 
 import tkinter
+import tkinter as tk
+from tkinter.ttk import *
 from tkinter.filedialog import *
+class CustomText(tk.Text):
+	def __init__(self, *args, **kwargs):
+		tk.Text.__init__(self, *args, **kwargs)
+
+        # create a proxy for the underlying widget
+		self._orig = self._w + "_orig"
+		self.tk.call("rename", self._w, self._orig)
+		self.tk.createcommand(self._w, self._proxy)
+
+	def _proxy(self, *args):
+		cmd = (self._orig,) + args
+		try:	
+			result = self.tk.call(cmd)
+		except Exception:	
+			return None
+
+        # generate an event if something was added or deleted,
+        # or the cursor position changed
+		if (args[0] in ("insert", "delete") or 
+			args[0:3] == ("mark", "set", "insert")):
+			self.event_generate("<<CursorChange>>", when="tail")
+
+		return result       
+
 ftar = None
 ftts = None
 word = ""
@@ -11,28 +36,32 @@ index=None
 replaceWord= ""
 class Notepad: 
 	# default window width and height 
-	root = Tk() 
+	root = Tk()
 	mainFont =tkFont.Font()
-	mainFont.config(family="arial",size=14,weight="normal")
+	mainFont.config(family="arial",size=14,weight="normal") 
 	ftts = None
 	ftar=None
 	thisWidth = 300
 	thisHeight = 300
-	thisTextArea = Text(root ,wrap=NONE,undo=True)
+	#thisTextArea = Text(root ,wrap=NONE,undo=True)
+	thisTextArea = CustomText(root,wrap=NONE,undo=True)
+	thisTextArea.config(wrap=NONE,undo=True)
 	thisMenuBar = Menu(root) 
 	thisFileMenu= Menu(thisMenuBar, tearoff=0) 
 	thisEditMenu = Menu(thisMenuBar, tearoff=0) 
 	thisHelpMenu = Menu(thisMenuBar, tearoff=0)
 	thisFormatMenu = Menu(thisMenuBar, tearoff=0)
+	thisViewMenu = Menu(thisMenuBar, tearoff=0)
 	# To add scrollbar 
 	YScrollBar = Scrollbar(thisTextArea,orient=tkinter.VERTICAL)	
 	XScrollBar = Scrollbar(thisTextArea,orient=tkinter.HORIZONTAL) 
 	file = None
 
-
 	def __init__(self,**kwargs):
-		#self.mainFont = Font
-		#self.mainFont.config(family='arial', weight='normal', size=14)
+		self.var = IntVar()
+		self.varFormat = IntVar()
+		self.varFormat.set(0)
+		self.var.set(1)
 		self.thisTextArea.config(font=self.mainFont)
 		self.text_is_edited = False
 		# Set icon 
@@ -66,45 +95,50 @@ class Notepad:
 		# Add controls (widget) 
 		self.thisTextArea.grid(sticky = N + E + S + W) 
 		# To open new file 
-		self.thisFileMenu.add_command(label="New", command=self.newFile)	 
+		self.thisFileMenu.add_command(label="New", command=self.newFile, accelerator="Ctrl+N")	 
 		# To open a already existing file 
-		self.thisFileMenu.add_command(label="Open", command=self.openFile) 
+		self.thisFileMenu.add_command(label="Open", command=self.openFile, accelerator="Ctrl+O") 
 		# To save current file 
-		self.thisFileMenu.add_command(label="Save", command=self.saveFile)
+		self.thisFileMenu.add_command(label="Save", command=self.saveFile, accelerator="Ctrl+S")
 		# To save current file as 
-		self.thisFileMenu.add_command(label="Save As", command=self.saveAsFile)	 
+		self.thisFileMenu.add_command(label="Save As", command=self.saveAsFile, accelerator="Ctrl+Shift+N")	 
 		# To create a line in the dialog
 		self.thisFileMenu.add_separator()										 
 		self.thisFileMenu.add_command(label="Exit", command=self.on_closing) 
 		self.thisMenuBar.add_cascade(label="File", menu=self.thisFileMenu)	 
 		# To give a feature of undo 
-		self.thisEditMenu.add_command(label="Undo", command=self.undo)	 
+		self.thisEditMenu.add_command(label="Undo", command=self.undo, accelerator="Ctrl+Z")	 
 		# To give a feature of redo 
-		self.thisEditMenu.add_command(label="Redo", command=self.redo)
+		self.thisEditMenu.add_command(label="Redo", command=self.redo, accelerator="Ctrl+Y")
 		self.thisEditMenu.add_separator()		 
 		# To give a feature of cut 
 		self.thisEditMenu.add_command(label="Cut", command=self.cut)			
 		# to give a feature of copy	 
-		self.thisEditMenu.add_command(label="Copy", command=self.copy)		 		
+		self.thisEditMenu.add_command(label="Copy", command=self.copy, accelerator="Ctrl+C")		 		
 		# To give a feature of paste 
-		self.thisEditMenu.add_command(label="Paste", command=self.paste)	 		
+		self.thisEditMenu.add_command(label="Paste", command=self.paste, accelerator="Ctrl+V")	 		
 		# To give a feature of paste 
 		self.thisEditMenu.add_command(label="Delete", command=self.delete)
 		self.thisEditMenu.add_separator()
 		# To give a feature of find 
-		self.thisEditMenu.add_command(label="Find", command=self.FindAsk)
+		self.thisEditMenu.add_command(label="Find", command=self.FindAsk, accelerator="Ctrl+F")
 		# To give a feature of replace 
-		self.thisEditMenu.add_command(label="Replace", command=self.ReplaceAsk)	
+		self.thisEditMenu.add_command(label="Replace", command=self.ReplaceAsk, accelerator="Ctrl+V")	
 		# To give a feature of goto 
-		self.thisEditMenu.add_command(label="Goto", command=self._goto_)		 		
+		self.thisEditMenu.add_command(label="Goto", command=self._goto_, accelerator="Ctrl+G")		 		
 		self.thisEditMenu.add_separator()		
 		# To give a feature of select all 
-		self.thisEditMenu.add_command(label="Select All", command=self.selectAll)	 
+		self.thisEditMenu.add_command(label="Select All", command=self.selectAll, accelerator="Ctrl+A")	 
 		# To give a feature of editing 
 		self.thisMenuBar.add_cascade(label="Edit",menu=self.thisEditMenu)
 		# To create a find function of the notepad 
+		self.thisFormatMenu.add_checkbutton(label="Word Wrap",variable=self.varFormat,command = self.checkWrap)
 		self.thisFormatMenu.add_command(label="Font", command=self.FontAsk) 
 		self.thisMenuBar.add_cascade(label="Format", menu=self.thisFormatMenu) 
+		self.root.config(menu=self.thisMenuBar) 
+		# To create a view function of the notepad 
+		self.thisViewMenu.add_checkbutton(label="Status bar",variable=self.var,command = self.checkStatus) 
+		self.thisMenuBar.add_cascade(label="View", menu=self.thisViewMenu) 
 		self.root.config(menu=self.thisMenuBar) 	 		
 		# To create a feature of description of the notepad 
 		self.thisHelpMenu.add_command(label="About Notepad", command=self.showAbout) 
@@ -113,6 +147,8 @@ class Notepad:
 		self.XScrollBar.pack(side=BOTTOM,fill=X)
 		self.YScrollBar.pack(side=RIGHT,fill=Y)					 		
 		# Scrollbar will adjust automatically according to the content	
+		self.statusbar = Label(self.root,  text="Line: 1, Col: 0", bd=1, relief=SUNKEN, anchor=W)
+		self.statusbar.grid(sticky=NSEW)
 	 
 		self.thisTextArea.config(xscrollcommand=self.XScrollBar.set) 
 		self.thisTextArea.config(yscrollcommand=self.YScrollBar.set)
@@ -120,6 +156,7 @@ class Notepad:
 		self.YScrollBar.config(command = self.thisTextArea.yview)
 		self.thisTextArea.focus()
 		#shortcuts
+		self.thisTextArea.bind("<<CursorChange>>", self._on_change)
 		self.thisTextArea.bind('<Control-s>', self.saveFile)
 		self.thisTextArea.bind('<Control-f>', self.FindAsk)
 		self.thisTextArea.bind('<Control-h>', self.ReplaceAsk)
@@ -137,6 +174,20 @@ class Notepad:
 		self.thisTextArea.bind('<Control-g>',self._goto_) 
 		#window closing listener
 		self.root.protocol("WM_DELETE_WINDOW",self.on_closing)
+	def checkStatus(self,event=None):
+		if self.var.get()!=1:
+			self.statusbar.grid_forget()
+		else:
+			self.statusbar.grid(sticky=NSEW)
+	def checkWrap(self,event=None):
+		if self.varFormat.get()==1:
+			self.thisTextArea.config(wrap=WORD)
+		if self.varFormat.get()==0:
+			self.thisTextArea.config(wrap=NONE)
+	def _on_change(self,event=None):
+		line, char = self.thisTextArea.index("insert").split(".")
+		message = "Line: %s, Col: %s" % (line, char)
+		self.statusbar.configure(text=message)
 	def FontAsk(self,event=None):
 		fofm =Toplevel(self.root)
 		fofm.title('Find')
@@ -172,10 +223,10 @@ class Notepad:
 			self.mainFont['size']=varSize.get()
 			self.mainFont['weight']=varStyle.get()
 			fofm.destroy()
-		btnOk = Button(fofm,text='OK', width = 10,height=1,relief="solid", bg='#ECECEC', bd=1,command=out)
+		btnOk = ttk.Button(fofm,text='OK',width=11, command=out)
 		btnOk.focus_set()
 		btnOk.place(x=245,y=400)
-		btnCancel = Button(fofm,text='Cancel', width = 10,height=1,relief="solid", bg='#ECECEC', bd=1,command=lambda:fofm.destroy())
+		btnCancel = ttk.Button(fofm,text='Cancel',width=11,command=lambda:fofm.destroy())
 		btnCancel.place(x=330,y=400)
 		
 		#font 
@@ -455,26 +506,26 @@ class Notepad:
 			ftts.destroy()
 		ftts =Toplevel(self.root)
 		ftts.title('Find')
-		ftts.geometry('{}x{}'.format(355, 120))	
+		ftts.geometry("355x150+400+300")	
 		ftts.transient(self.root)	
 		Label(ftts, text = 'Find What:').place(x=5,y=10)
 		entFind = Entry(ftts, width = 30,relief="solid", highlightbackground="grey", highlightcolor="RoyalBlue1", highlightthickness=1, bd=0)
 		entFind.place(x=80,y=10)
-		btnFind = Button(ftts,text='Find Next', width = 8,height=1,relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1, bg='light grey',command = _search_)
+		btnFind = ttk.Button(ftts,text='Find Next', width = 10,command = _search_)
 		btnFind.focus_set()
 		btnFind.place(x=280,y=10)
-		btnCancel = Button(ftts,text='Cancel', bg='light grey', width = 8,height=1,relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command=lambda:ftts.destroy()).place(x=280,y=40)
+		btnCancel = ttk.Button(ftts,text='Cancel', width = 10,command=lambda:ftts.destroy()).place(x=280,y=40)
 		ctr_mid = Frame(ftts, width=115, height=40, padx=3, pady=3, highlightbackground="grey",highlightthickness=1).place(x=150,y=45)
 		Label(ftts, text = 'Direction').place(x=160,y=35)
 		entFind.focus()
 		CheckVar1 = IntVar()
 		CheckVar2 = IntVar()
-		Checkbutton(ftts, text = "Match case", variable = CheckVar1).place(x=5,y=65)
-		Checkbutton(ftts, text = "Wrap around", variable = CheckVar2).place(x=5,y=90)
+		ttk.Checkbutton(ftts, text = "Match case", variable = CheckVar1).place(x=5,y=65)
+		ttk.Checkbutton(ftts, text = "Wrap around", variable = CheckVar2).place(x=5,y=90)
 		ftts.resizable(0,0)
 		dir.set(2)
-		rdUp = Radiobutton(ftts, text='Up',variable=dir, value=1)
-		rdDown = Radiobutton(ftts, text='Down',variable=dir, value=2)
+		rdUp = ttk.Radiobutton(ftts, text='Up',variable=dir, value=1)
+		rdDown = ttk.Radiobutton(ftts, text='Down',variable=dir, value=2)
 		rdUp.place(x=155,y=55)
 		rdDown.place(x=200,y=55)
 		entFind.bind('<Any-Button>',self.reset_tags)
@@ -485,6 +536,15 @@ class Notepad:
 			entFind.insert(0,word)
 		entFind.focus()
 		entFind.selection_range(0, END)
+		def on_focus(event=None):
+			if  not entFind.get():
+				btnFind.config(state=DISABLED)
+			else:
+				btnFind.state(['pressed', '!disabled'])
+		entFind.bind("<Return>", lambda event:btnFind.invoke())
+		entFind.bind("<FocusIn>",on_focus)
+		entFind.bind("<Key>",on_focus)
+		entFind.bind("<Control-h>",self.ReplaceAsk)
 
 	def _goto_(self,event=None):
 		def _go_():
@@ -500,34 +560,30 @@ class Notepad:
 			self.thisTextArea.event_generate("<<LineEnd>>")
 			self.thisTextArea.focus()
 			
-			
-			
-			
-			
-		
 		def only_numbers(char):
 			return char.isdigit()
 	
 		validation = self.root.register(only_numbers)
 		gtfm = Toplevel(self.root)
 		gtfm.title('Go To Line')
-		gtfm.geometry('{}x{}'.format(250, 95))	
+		gtfm.geometry("250x95+140+300")	
 		gtfm.transient(self.root)
 		Label(gtfm, text = 'Line number:').place(x=5,y=10)
 		entGoto = Entry(gtfm, width = 36,relief="solid", highlightbackground="grey", highlightcolor="RoyalBlue1", highlightthickness=1, bd=0, validate="key", validatecommand=(validation, '%S'))
 		entGoto.place(x=10,y=30)
-		btnGoto = Button(gtfm,text='Go To', width = 9,height=1, bg='light grey',relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command=_go_)
+		btnGoto = ttk.Button(gtfm,text='Go To', width = 10,command=_go_)
 		btnGoto.focus_set()
 		btnGoto.place(x=80,y=60)
-		btnCancel = Button(gtfm,text='Cancel', width = 9,height=1, bg='light grey',relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command=lambda:gtfm.destroy())
+		btnCancel = ttk.Button(gtfm,text='Cancel', width = 10,command=lambda:gtfm.destroy())
 		btnCancel.place(x=160,y=60)
-		#entGoto.bind("<Enter>", lambda event:btnGoto.invoke())
+		entGoto.bind("<Return>", lambda event:btnGoto.invoke())
 		gtfm.resizable(0,0)
 		index = self.thisTextArea.index(INSERT)
 		starting_index =int(index.split(".")[0])
 		entGoto.insert(0,starting_index)
 		entGoto.focus()
 		entGoto.selection_range(0, END)
+		btnGoto.state(['pressed', '!disabled'])
 
 
 
@@ -607,23 +663,26 @@ class Notepad:
 		ftar = Toplevel(self.root)
 		ftar.title('Replace')
 		ftar.transient(self.root)
-		ftar.geometry('{}x{}'.format(355, 160))	
+		ftar.geometry("355x170+400+200")
 		Label(ftar,text= 'Find What:').place(x=5,y=10)
 		findText = Entry(ftar, width = 30,relief="solid", highlightbackground="grey", highlightcolor="RoyalBlue1", highlightthickness=1, bd=0)
 		findText.place(x=80,y=10)
 		Label(ftar, text= 'Replace With:').place(x=5,y=40)
 		replaceText = Entry(ftar, width = 30,relief="solid", highlightbackground="grey", highlightcolor="RoyalBlue1", highlightthickness=1, bd=0)
 		replaceText.place(x=80,y=40)
-		btnFind = Button(ftar,text='Find Next', width = 8,height=1, bg='light grey',relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command=_search_).place(x=280,y=10)
+		btnFind = ttk.Button(ftar,text='Find Next', width = 10,command=_search_)
+		btnFind.place(x=280,y=10)
 	
-		btnReplace = Button(ftar,text='Replace', width = 8, bg='light grey',height=1,relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command = _replace_).place(x=280,y=40)
+		btnReplace = ttk.Button(ftar,text='Replace', width = 10,command = _replace_)
+		btnReplace.place(x=280,y=40)
 		fields['submit']=False
-		btnReplaceAll = Button(ftar,text='Replace All', bg='light grey', width = 8,height=1,relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command = _replace_all_).place(x=280,y=70)
-		btnCancel = Button(ftar,text='Cancel', width = 8,height=1, bg='light grey',relief="solid", highlightbackground="blue", highlightcolor="RoyalBlue1", bd=1,command=lambda:ftar.destroy()).place(x=280,y=100)
+		btnReplaceAll = ttk.Button(ftar,text='Replace All', width = 10,command = _replace_all_)
+		btnReplaceAll.place(x=280,y=70)
+		btnCancel = ttk.Button(ftar,text='Cancel', width = 10,command=lambda:ftar.destroy()).place(x=280,y=100)
 		CheckVar1 = IntVar()
 		CheckVar2 = IntVar()
-		Checkbutton(ftar, text = "Match case", variable = CheckVar1).place(x=5,y=105)
-		Checkbutton(ftar, text = "Wrap around", variable = CheckVar2).place(x=5,y=130)
+		ttk.Checkbutton(ftar, text = "Match case", variable = CheckVar1).place(x=5,y=105)
+		ttk.Checkbutton(ftar, text = "Wrap around", variable = CheckVar2).place(x=5,y=130)
 		ftar.resizable(0,0)
 	
 		findText.bind('<Any-Button>',self.reset_tags)
@@ -635,7 +694,19 @@ class Notepad:
 		replaceText.insert(0,replaceWord)
 		findText.focus()
 		findText.selection_range(0, END)
-
+		def on_focus(event=None):
+			if  not findText.get():
+				btnFind.config(state=DISABLED)
+				btnReplace.config(state=DISABLED)
+				btnReplaceAll.config(state=DISABLED)
+			else:
+				btnFind.state(['pressed', '!disabled'])
+				btnReplace.config(state=NORMAL)
+				btnReplaceAll.config(state=NORMAL)
+		findText.bind("<Return>", lambda event:btnFind.invoke())
+		findText.bind("<FocusIn>",on_focus)
+		findText.bind("<Key>",on_focus)
+		findText.bind("<Control-f>",self.FindAsk)
 	def _pop_up_(self,event=None):
 		self.menu = tkinter.Menu(self.root,tearoff=0)
 		self.menu.add_command(label="Undo", command=self.undo)
